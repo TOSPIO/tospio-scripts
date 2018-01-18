@@ -2,6 +2,7 @@ extern crate regex;
 
 use std::cmp::Ordering;
 use std::fs::DirEntry;
+use std::io::{ErrorKind, Write, stdout};
 use std::path::Path;
 use regex::Regex;
 
@@ -29,15 +30,19 @@ impl PSFD {
     }
 }
 
-fn psfd(entry: &DirEntry) -> PSFD {
+fn psfd(entry: &DirEntry) -> Option<PSFD> {
     let path = entry.path();
     let fd_path = path.join(Path::new("fd"));
     let pid = path.file_name().unwrap().to_str().unwrap();
-    let read_dir = fd_path.read_dir().expect("read_dir call failed");
-    return PSFD {
-        pid: pid.parse().unwrap(),
-        cnt: read_dir.count()
-    };
+    if let Ok(read_dir) = fd_path.read_dir() {
+        return Some(
+            PSFD {
+                pid: pid.parse().unwrap(),
+                cnt: read_dir.count()
+            }
+        );
+    }
+    return None;
 }
 
 fn psfds() -> Vec<PSFD> {
@@ -48,7 +53,9 @@ fn psfds() -> Vec<PSFD> {
         if let Ok(entry) = entry {
             let file_name = entry.file_name().into_string().unwrap();
             if pid_regex.is_match(file_name.as_str()) {
-                psfds.push(psfd(&entry));
+                if let Some(psfd) = psfd(&entry) {
+                    psfds.push(psfd);
+                }
             }
         }
     }
@@ -58,7 +65,13 @@ fn psfds() -> Vec<PSFD> {
 fn main() {
     let mut psfds = psfds();
     psfds.sort();
+    let mut stdout = stdout();
     for psfd in psfds.iter().rev() {
-        println!("{}", psfd.format());
+        if let Err(err) = writeln!(stdout, "{}", psfd.format()) {
+            if err.kind() == ErrorKind::BrokenPipe {
+                return;
+            }
+            panic!(err);
+        }
     }
 }
