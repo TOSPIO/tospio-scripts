@@ -1,11 +1,16 @@
 [package]
-name = "tospio-scripts"
+name = "tospio_scripts"
 version = "0.1.0"
 authors = ["Kenneth Zhao <kenneth.zhao@netis.com.cn>"]
 
 [dependencies]
 regex = "*"
+libc = "*"
 
 [[bin]]
 name = "psfd"
 path = "bin/psfd/main.rs"
+
+[[bin]]
+name = "tyme"
+path = "bin/tyme/main.rs"
